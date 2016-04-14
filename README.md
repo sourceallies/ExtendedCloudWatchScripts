@@ -2,6 +2,8 @@
 
 Extension to Amazon Cloud Watch Scripts that adds logical volume metrics found here: [http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts.html](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts.html)
 
+This is usefull for reporting the disk space metrics for the docker logical volume in the official AWS ECS Optimized AMI.
+
 ## Features
 This addresses the issue of not being able to create metrics for Logical Volumes.
 Using these scripts you now gain:
