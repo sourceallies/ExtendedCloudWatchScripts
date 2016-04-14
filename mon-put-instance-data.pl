@@ -31,10 +31,13 @@ Description of available options:
   --disk-space-util   Reports disk space utilization in percentages.  
   --disk-space-used   Reports allocated disk space in gigabytes.
   --disk-space-avail  Reports available disk space in gigabytes.
+  --lv-space-util     Reports logical volume space utilization in percentages.
+  --lv-space-used     Reports used logical volume space in gigabytes.
+  --lv-space-avail    Reports available logical volume space in gigabytes.
   
   --aggregated[=only]    Adds aggregated metrics for instance type, AMI id, and region.
                          If =only is specified, does not report individual instance metrics
-  --auto-scaling[=only]  Reports Auto Scaling metrics in addition to instance metrics. 	 
+  --auto-scaling[=only]  Reports Auto Scaling metrics in addition to instance metrics.
                          If =only is specified, does not report individual instance metrics
                          
   --mem-used-incl-cache-buff  Count memory that is cached and in buffers as used.
@@ -115,6 +118,9 @@ my $report_swap_used;
 my $report_disk_util;
 my $report_disk_used;
 my $report_disk_avail;
+my $report_lv_util;
+my $report_lv_used;
+my $report_lv_avail;
 my $mem_used_incl_cache_buff;
 my @mount_path;
 my $mem_units;
@@ -122,7 +128,7 @@ my $disk_units;
 my $mem_unit_div = 1;
 my $disk_unit_div = 1;
 my $aggregated;
-my $auto_scaling; 	 
+my $auto_scaling;
 my $from_cron;
 my $verify;
 my $verbose;
@@ -153,6 +159,9 @@ my $argv_size = @ARGV;
     'disk-space-util' => \$report_disk_util,
     'disk-space-used' => \$report_disk_used,
     'disk-space-avail' => \$report_disk_avail,
+    'lv-space-util' => \$report_lv_util,
+    'lv-space-used' => \$report_lv_used,
+    'lv-space-avail' => \$report_lv_avail,
     'auto-scaling:s' => \$auto_scaling,
     'aggregated:s' => \$aggregated,
     'memory-units:s' => \$mem_units,
@@ -327,9 +336,17 @@ if (!$report_disk_space && ($report_disk_util || $report_disk_used || $report_di
   exit_with_error("Metrics to report disk space are provided but disk path is not specified.");
 }
 
+# check that a lv exists
+my $report_lv_space;
+foreach my $line (split('\n', `sudo lvdisplay --columns --noheadings`)) {
+  if ($line ne '') {
+    $report_lv_space = 1;
+  }
+}
+
 # check that there is a need to monitor at least something
 if (!$report_mem_util && !$report_mem_used && !$report_mem_avail
-  && !$report_swap_util && !$report_swap_used && !$report_disk_space)
+  && !$report_swap_util && !$report_swap_used && !$report_disk_space && !$report_lv_space)
 {
   exit_with_error("No metrics specified for collection and submission to CloudWatch.");
 }
@@ -569,6 +586,31 @@ if ($report_disk_space)
     }
     if ($report_disk_avail) {
       add_metric('DiskSpaceAvailable', $disk_units, $disk_avail / $disk_unit_div, $fsystem, $mount);
+    }
+  }
+}
+
+# collect logical volume metrics
+
+if ($report_lv_space) {
+  foreach my $line (split('\n', `sudo lvdisplay --columns --separator : --noheadings --units g`)) {
+    my @segments = split(':', $line);
+    my $name = $segments[0];
+    $name =~ s/^\s+//;
+    if ($report_lv_util) {
+      add_metric('LogicalVolumeSpaceUtilization', 'Percent', $segments[6], '/dev/xvdcz', $name);
+    }
+    if ($report_lv_avail) {
+      my $avail = $segments[3];
+      $avail =~ s/g$//;
+      add_metric('LogicalVolumeSpaceAvailable', $disk_units, $avail, '/dev/xvdcz', $name);
+    }
+    if ($report_lv_used) {
+      my $avail = $segments[3];
+      $avail =~ s/g$//;
+      my $lvused = 0;
+      $lvused = $avail * $segments[6] / 100;
+      add_metric('LogicalVolumeSpaceUsed', $disk_units, $lvused, '/dev/xvdcz', $name);
     }
   }
 }
