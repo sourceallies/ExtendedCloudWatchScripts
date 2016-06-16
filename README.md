@@ -19,7 +19,7 @@ This could be used with the [Amazon ECS Optimized AMI](http://docs.aws.amazon.co
 ```
 #!/bin/bash
 yum -y install perl-Switch perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https perl-Digest-SHA.x86_64
-curl -L https://github.com/alexanderbh/ExtendedCloudWatchScripts/archive/1.0.0.tar.gz -O
+curl -L https://github.com/sourceallies/ExtendedCloudWatchScripts/archive/1.0.0.tar.gz -O
 tar -zxvf 1.0.0.tar.gz -C /
 (crontab -l ; echo "*/5 * * * * /ExtendedCloudWatchScripts-1.0.0/mon-put-instance-data.pl --lv-space-util --lv-space-avail --lv-space-used --auto-scaling --from-cron")| crontab -
 ```
